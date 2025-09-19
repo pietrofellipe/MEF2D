@@ -1,0 +1,128 @@
+
+for (int i=1; i<7; i++)
+{
+        load "gmsh"
+        verbosity = 0;
+        mesh Th = gmshload("Nucleo_E_I - Trabalho elements "+i+".msh");
+        plot (Th, wait = 1, cmm = "Malha");
+
+        // Definição das regions dentro do arquivo .geo
+        // ar = 1
+        // entreferro = 2
+        // culatra inferior = 3
+        // nucleo superior = 4
+        // coil = 5
+        // nucleo superior 2 = 6
+        // nucleo superior 3 = 7
+        // simetria = 101
+
+        fespace ThP0(Th, P0);
+        fespace ThP1(Th, P1);
+
+        ThP0 reg = region;
+        plot (reg, wait = 1, fill = 1, cmm = "Espacos P0");
+
+        real mu0 = 4*pi*1e-7;
+        ThP0 mu = 
+                mu0*(reg==1)
+                +mu0*(reg==2) 
+                +10000*mu0*(reg==3)
+                +10000*mu0*(reg==4)
+                +mu0*(reg==5)
+                +mu0*(reg==6)
+                +10000*mu0*(reg==7);
+
+        real area = int2d(Th, 5)(1);
+        //cout << "Area do coil = " << area << endl;
+        plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 10000*u0 e de u0");
+
+        real j=10000.0; // (A/m^2) N=1000 e i=0.1A espira
+
+        ThP1 a,w;
+        solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
+                        -   int2d(Th, 5)(j*w)  
+                        +   on (102, a = 0)
+                        +   on (101, a = 0);
+
+        plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
+
+
+
+
+        ThP0 Bx=dy(a), By=-dx(a);
+
+                ThP0 normb = sqrt(Bx^2+By^2);
+                real energiatotal = int2d(Th)((Bx^2 + By^2)/(2*mu));
+                real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
+
+                //cout << "Valor de B no entreferro "+i+" " << normb(0.25,-0.01) << endl;
+                cout << "Valor da energia variando a malha "+i+" " << energiatotal << endl;
+                //cout << "Valor da energia sqrt "+i+" " << energiasqrt << endl;
+
+
+                plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");
+        }
+
+for (int i=1; i<6; i++)
+{
+        load "gmsh"
+        verbosity = 0;
+        mesh Th = gmshload("Nucleo_E_I - Trabalho raio "+i+".msh");
+        plot (Th, wait = 1, cmm = "Malha");
+
+        // Definição das regions dentro do arquivo .geo
+        // ar = 1
+        // entreferro = 2
+        // culatra inferior = 3
+        // nucleo superior = 4
+        // coil = 5
+        // nucleo superior 2 = 6
+        // nucleo superior 3 = 7
+        // simetria = 101
+
+        fespace ThP0(Th, P0);
+        fespace ThP1(Th, P1);
+
+        ThP0 reg = region;
+        plot (reg, wait = 1, fill = 1, cmm = "Espacos P0");
+
+        real mu0 = 4*pi*1e-7;
+        ThP0 mu = 
+                mu0*(reg==1)
+                +mu0*(reg==2) 
+                +10000*mu0*(reg==3)
+                +10000*mu0*(reg==4)
+                +mu0*(reg==5)
+                +mu0*(reg==6)
+                +10000*mu0*(reg==7);
+
+        real area = int2d(Th, 5)(1);
+        //cout << "Area do coil = " << area << endl;
+        plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 1000*u0 e de u0");
+
+        real j=10000.0; // (A/m^2) N=1000 e i=0.1A espira
+
+        ThP1 a,w;
+        solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
+                        -   int2d(Th, 5)(j*w)  
+                        +   on (102, a = 0)
+                        +   on (101, a = 0);
+
+        plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
+
+
+
+
+        ThP0 Bx=dy(a), By=-dx(a);
+
+                ThP0 normb = sqrt(Bx^2+By^2);
+                real energiatotal = int2d(Th)((Bx^2 + By^2)/(2*mu));
+                //real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
+
+                //cout << "Valor de B no entreferro "+i+" " << normb(0.25,0.05) << endl;
+                cout << "Valor da energia variando o raio "+i+" " << energiatotal << endl;
+                //cout << "Valor da energia sqrt "+i+" " << energiasqrt << endl;
+
+
+                plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");
+        }
