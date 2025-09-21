@@ -1,0 +1,89 @@
+load "gmsh"
+        verbosity = 0;
+        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - integral.msh");
+        //plot (Th, wait = 1, cmm = "Malha");
+
+        // Definição das regions dentro do arquivo .geo
+        // ar = 1
+        // entreferro = 2
+        // culatra inferior = 3
+        // nucleo superior = 4
+        // coil direito = 5
+        // coil esquerdo = 9
+        // nucleo superior 2 = 6
+        // nucleo superior 3 = 7
+        // simetria = 101
+
+        mesh Th2 = movemesh(Th, [-x, y]);
+        int[int] rcoil = [5,9]; // alterado o coil da esquerda para a label 9
+        Th2 = change(Th2, reft = rcoil);
+        mesh Thtotal = Th + Th2;
+        plot (Thtotal, wait = 1);
+
+        fespace ThP0(Thtotal, P0);
+        fespace ThP1(Thtotal, P1);
+
+        ThP0 reg = region;
+        plot (reg, wait = 1, fill = 1, cmm = "Espacos P0");
+
+        real mu0 = 4*pi*1e-7;
+         
+        ThP0 mu =mu0*(reg==1)
+                +mu0*(reg==2) 
+                +10000*mu0*(reg==3)
+                +10000*mu0*(reg==4)
+                +mu0*(reg==5)
+                +10000*mu0*(reg==6)
+                +10000*mu0*(reg==7)
+                +mu0*(reg==9);
+
+        real area = int2d(Thtotal, 5)(1);
+        //cout << "Area do coil = " << area << endl;
+        plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 1000*u0 e de u0");
+
+        real j=3200000.0; // (A/m^2) N=1000 e i=32A espira ampere-espira = 32 000 S = 0.01m^2
+        real itotal = 32000;
+        real iindividual = 32;
+        real espiras = 1000;
+        ThP1 a,w;
+        solve laplace(a,w) = int2d(Thtotal)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
+                        -   int2d(Thtotal, 5)(j*w)
+                        -   int2d(Thtotal, 9)(-j*w)   
+                        +   on (102, a = 0);
+        //                +   on (101, a = 0);
+
+        plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
+
+        
+        real x1 = 0.1;
+        real x2 = 0.2;
+        real y3 = 0;
+
+        //border entref_interno(t=x1, x2){x=t; y=y3; label=500; }
+
+        
+        ThP0 Bx=dy(a), By=-dx(a);
+
+                ThP0 normb = sqrt(Bx^2+By^2);
+                real energiatotal = int2d(Thtotal)((Bx^2 + By^2)/(2*mu));
+                //real energiasqrt = int2d(Thtotal)(normb^2)/(2*mu0);
+                real indutanciaenergia = energiatotal*2/(iindividual)^2;
+                real indutanciafluxo = (espiras * int1d(Thtotal, 400)(-By)) / iindividual;
+                real fluxomedio = (1/(espiras * iindividual)) * (int2d(Thtotal, 5)(a*j) + int2d(Thtotal, 9)(a*-j));
+                real indutanciafluxomedio = (espiras * fluxomedio) / iindividual;
+
+               
+
+                cout << "Valor de B no entreferro interno" << normb(0.05,-0.01) << endl;
+                cout << "Valor de B no entreferro externo" << normb(0.25,-0.01) << endl;
+                cout << "Valor da energia " << energiatotal << endl;
+                cout << "Valor da indutancia por energia " << indutanciaenergia << endl;
+                cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
+                cout << "Valor da indutancia por fluxo medio " << indutanciafluxomedio << endl;
+                cout << "Fluxo medio: " << fluxomedio << endl;
+
+                // verificação do tamanho da linha 400
+                //real comp400 = int1d(Thtotal, 400)(1);
+                //cout << "Comprimento 400: " << comp400 << endl;
+
+                plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");

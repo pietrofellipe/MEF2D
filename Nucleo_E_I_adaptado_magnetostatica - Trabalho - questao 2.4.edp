@@ -1,0 +1,121 @@
+load "gmsh"
+        verbosity = 0;
+        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Nucleo_E_I - Trabalho tensormaxwell.msh");
+        plot (Th, wait = 1, cmm = "Malha");
+
+        // Definição das regions dentro do arquivo .geo
+        // ar = 1
+        // entreferro = 2
+        // culatra inferior = 3
+        // nucleo superior = 4
+        // coil = 5
+        // nucleo superior 2 = 6
+        // nucleo superior 3 = 7
+        // simetria = 101
+
+        fespace ThP0(Th, P0);
+        fespace ThP1(Th, P1);
+
+        ThP0 reg = region;
+        plot (reg, wait = 1, fill = 1, cmm = "Espacos P0");
+
+        real mu0 = 4*pi*1e-7;
+         
+        ThP0 mu =mu0*(reg==1)
+                +mu0*(reg==2) 
+                +10000*mu0*(reg==3)
+                +10000*mu0*(reg==4)
+                +mu0*(reg==5)
+                +10000*mu0*(reg==6)
+                +10000*mu0*(reg==7);
+
+        real area = int2d(Th, 5)(1);
+        //cout << "Area do coil = " << area << endl;
+        plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 1000*u0 e de u0");
+
+        real j=3200000.0; // (A/m^2) N=1000 e i=32A espira ampere-espira = 32 000 S = 0.01m^2
+        real itotal = 32000;
+        ThP1 a,w;
+        solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
+                        -   int2d(Th, 5)(j*w)  
+                        +   on (102, a = 0)
+                        +   on (101, a = 0);
+
+        plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
+
+        
+
+        
+        ThP0 Bx=dy(a), By=-dx(a);
+
+                ThP0 normb = sqrt(Bx^2+By^2);
+                real energiatotal = int2d(Th, 2)((Bx^2 + By^2)/(2*mu));
+                real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
+                real indutanciaenergia = energiatotal*2/(j*area)^2;
+                //real indutanciafluxo = (1 * int1d(Th, 400)(-By)) / itotal;
+                //real indutanciafluxomedio = (1/itotal)* int2d(Th, 5)(a*j);
+
+                cout << "Valor de B no entreferro interno" << normb(0.05,-0.01) << endl;
+                cout << "Valor de B no entreferro externo" << normb(0.25,-0.01) << endl;
+                cout << "Valor da energia " << energiatotal << endl;
+                cout << "Valor da indutancia por energia " << indutanciaenergia << endl;
+                //cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
+                //cout << "Valor da indutancia por fluxo medio " << indutanciafluxo << endl;
+
+        
+                // ---------------------- Tensor de Maxwell e forças ----------------------
+
+
+                ThP0 Hx = Bx / mu;    // Hx ponto-a-ponto (usa mu definido por região)
+                ThP0 Hy = By / mu;    // Hy
+                ThP0 wc  = 0.5*(Bx*Hx + By*Hy); // coenergia local (B·H/2)
+                ThP0 normh = sqrt(Hx^2+Hy^2);
+
+
+                // plotagens rápidas (opcionais)
+                plot([Hx,Hy], wait=1, fill=1, value=1, cmm="Hx Hy (A/m)");
+                plot(wc, wait=1, fill=1, value=1, cmm="coenergia wc");
+                cout << "Valor de H no entreferro interno" << normh(0.05,-0.01) << endl;
+                cout << "Valor de H no entreferro externo" << normh(0.25,-0.01) << endl;
+
+                // Força na linha do tensor de Maxwell
+                // Fy = - ∫ mu0 * (Hx^2 - Hy^2) / 2  ds
+                // Fx = - ∫ mu0 * (Hx*Hy) ds
+
+                
+                real Fx = - int1d(Th, 600)( mu0*(Hx*Hy) );
+                real Fy = - int1d(Th, 600)( mu0*(Hx^2 - Hy^2)/2 );
+
+                cout << "Forca (linha 600) - componente x = " << Fx << " N" << endl;
+                cout << "Forca (linha 600) - componente y = " << Fy << " N" << endl;
+
+                // --- Forças nodais via formulação variacional (soma nodal) ---
+                // Montamos macros semelhantes ao exemplo do prof.
+                macro grad(a) [dx(a),dy(a)] //
+
+                macro MTx [Hx*Bx - wc,  Hx*By] //
+                macro MTy [Hx*By,     Hy*By - wc] //
+
+                // varf que produz distribuição nodal da força (componentes x e y)
+                varf nodeForcex(a,w) = - int2d(Th)( MTx' * grad(w) );
+                varf nodeForcey(a,w) = - int2d(Th)( MTy' * grad(w) );
+
+                ThP1 FFx, FFy;
+                FFx[] = nodeForcex(0, ThP1);
+                FFy[] = nodeForcey(0, ThP1);
+
+                // Se quiser limitar a região onde somar (apenas numa região local),
+                // você pode montar um mask P0 igual ao exemplo do prof..
+                // Aqui somamos globalmente (você pode filtrar por região se desejar).
+
+                // plot das forças nodais (vetor)
+                plot([FFx, FFy], wait=1, fill=1, value=1, cmm="forcas nodais (Fx,Fy)");
+
+                // soma global das forças nodais (deve concordar com a integral de contorno se tudo estiver consistente)
+                cout << "Forca (nodos) - componente x = " << FFx[].sum << " N" << endl;
+                cout << "Forca (nodos) - componente y = " << FFy[].sum << " N" << endl;
+
+                // ---------------------- FIM Tensor de Maxwell ----------------------
+                        
+
+                plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");

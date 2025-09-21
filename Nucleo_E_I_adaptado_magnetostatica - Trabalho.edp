@@ -3,7 +3,7 @@ for (int i=1; i<7; i++)
 {
         load "gmsh"
         verbosity = 0;
-        mesh Th = gmshload("Nucleo_E_I - Trabalho elements "+i+".msh");
+        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - Trabalho elements "+i+".msh");
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
@@ -36,7 +36,7 @@ for (int i=1; i<7; i++)
         //cout << "Area do coil = " << area << endl;
         plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 10000*u0 e de u0");
 
-        real j=10000.0; // (A/m^2) N=1000 e i=0.1A espira
+        real j=1000000.0; // (A/m^2) N=1000 e i=10A espira
 
         ThP1 a,w;
         solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
@@ -67,7 +67,7 @@ for (int i=1; i<6; i++)
 {
         load "gmsh"
         verbosity = 0;
-        mesh Th = gmshload("Nucleo_E_I - Trabalho raio "+i+".msh");
+        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - Trabalho raio "+i+".msh");
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
@@ -100,7 +100,7 @@ for (int i=1; i<6; i++)
         //cout << "Area do coil = " << area << endl;
         plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 1000*u0 e de u0");
 
-        real j=10000.0; // (A/m^2) N=1000 e i=0.1A espira
+        real j=1000000.0; // (A/m^2) N=1000 e i=10A espira
 
         ThP1 a,w;
         solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
