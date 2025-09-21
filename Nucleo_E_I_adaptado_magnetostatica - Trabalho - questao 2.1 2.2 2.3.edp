@@ -80,7 +80,7 @@ load "gmsh"
 
                 real integralAJ = int2d(Th, 5)( a * j );   // ∫_coil A J dS
 
-                cout << "integral AJ = " << integralAJ << endl;
+                //cout << "integral AJ = " << integralAJ << endl;
 
-                cout << "2*energiaTotal = " << 2*energiatotal << endl;
+                //cout << "2*energiaTotal = " << 2*energiatotal << endl;
 

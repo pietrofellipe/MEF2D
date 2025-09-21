@@ -84,6 +84,6 @@ load "gmsh"
 
                 // verificação do tamanho da linha 400
                 //real comp400 = int1d(Thtotal, 400)(1);
-                //cout << "Comprimento 400: " << comp400 << endl;
+                //cout << "Comprimento 400: " << comp400 << endl; // 
 
                 plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");

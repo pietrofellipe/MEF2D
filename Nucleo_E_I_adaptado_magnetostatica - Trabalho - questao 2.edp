@@ -48,7 +48,7 @@
         real x2 = 0.2;
         real y3 = 0;
 
-        //border entref_interno(t=x1, x2){x=t; y=y3; label=500; }
+        //border entref_interno(t=x1, x2){x=t; y=y3; label=500; } //teste com border
 
         
         ThP0 Bx=dy(a), By=-dx(a);
