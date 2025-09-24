@@ -1,6 +1,6 @@
 load "gmsh"
         verbosity = 0;
-        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Nucleo_E_I - Trabalho tensormaxwell.msh");
+        mesh Th = gmshload("W:/github/MEF2D/Mesh/Nucleo_E_I - Trabalho tensormaxwell.msh");
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
@@ -35,6 +35,8 @@ load "gmsh"
 
         real j=3200000.0; // (A/m^2) N=1000 e i=32A espira ampere-espira = 32 000 S = 0.01m^2
         real itotal = 32000;
+        real iindividual = 32;
+        real espiras = 1000;
         ThP1 a,w;
         solve laplace(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
                         -   int2d(Th, 5)(j*w)  
@@ -43,24 +45,37 @@ load "gmsh"
 
         plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
 
+        //real comp500 = int1d(Th, 500)(1);
+        //real comp400 = int1d(Th, 400)(1);
+        //cout << "Comprimento da linha 500: " << comp500 << endl;
+        //cout << "Comprimento da linha 400: " << comp400 << endl;
         
+        real x1 = 0.1;
+        real x2 = 0.2;
+        real y3 = 0;
+
+        //border entref_interno(t=x1, x2){x=t; y=y3; label=500; }
 
         
         ThP0 Bx=dy(a), By=-dx(a);
 
                 ThP0 normb = sqrt(Bx^2+By^2);
-                real energiatotal = int2d(Th, 2)((Bx^2 + By^2)/(2*mu));
-                real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
-                real indutanciaenergia = energiatotal*2/(j*area)^2;
-                //real indutanciafluxo = (1 * int1d(Th, 400)(-By)) / itotal;
-                //real indutanciafluxomedio = (1/itotal)* int2d(Th, 5)(a*j);
+                real energiatotal = int2d(Th)((Bx^2 + By^2)/(2*mu));
+                //real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
+                real indutanciaenergia = energiatotal*2/(iindividual)^2;
+                real indutanciafluxo = (espiras * int1d(Th, 400)(-By)) / iindividual;
+                real fluxomedio = (1/(espiras * iindividual)) * int2d(Th, 5)(a*j);
+                real indutanciafluxomedio = (espiras * fluxomedio) / iindividual;
 
-                cout << "Valor de B no entreferro interno" << normb(0.05,-0.01) << endl;
-                cout << "Valor de B no entreferro externo" << normb(0.25,-0.01) << endl;
+                cout << "Valor de B no entreferro interno linha 600 " << normb(0.05,-0.02) << endl;
+                cout << "Valor de B no entreferro externo linha 600 " << normb(0.25,-0.02) << endl;
                 cout << "Valor da energia " << energiatotal << endl;
                 cout << "Valor da indutancia por energia " << indutanciaenergia << endl;
-                //cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
-                //cout << "Valor da indutancia por fluxo medio " << indutanciafluxo << endl;
+                cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
+                cout << "Valor da indutancia por fluxo medio " << indutanciafluxomedio << endl;
+
+
+                plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");
 
         
                 // ---------------------- Tensor de Maxwell e forças ----------------------
@@ -85,9 +100,12 @@ load "gmsh"
                 
                 real Fx = - int1d(Th, 600)( mu0*(Hx*Hy) );
                 real Fy = - int1d(Th, 600)( mu0*(Hx^2 - Hy^2)/2 );
+                
+                
 
                 cout << "Forca (linha 600) - componente x = " << Fx << " N" << endl;
                 cout << "Forca (linha 600) - componente y = " << Fy << " N" << endl;
+                
 
                 // --- Forças nodais via formulação variacional (soma nodal) ---
                 // Montamos macros semelhantes ao exemplo do prof.

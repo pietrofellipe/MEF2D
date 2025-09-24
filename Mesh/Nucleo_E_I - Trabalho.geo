@@ -154,3 +154,7 @@ Point(39) = {0, 0, 0, 1.0};
 Point(41) = {0.3, 0, 0, 1.0};
 //+
 Physical Curve("bordatensormaxwell", 600) = {17};
+//+
+Physical Curve("fmaxwellentreferrointerno", 601) = {14};
+//+
+Physical Curve("fmaxwellentreferroexterno", 602) = {16};

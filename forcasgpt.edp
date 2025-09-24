@@ -1,0 +1,95 @@
+// ---------------------------
+// PROBLEMA MAGNÉTICO NÃO LINEAR
+// ---------------------------
+load "gmsh"
+verbosity = 0;
+mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - integral.msh");
+plot (Th, wait = 1, cmm = "Malha");
+
+// Definição das regiões do .geo
+// ar = 1
+// entreferro = 2
+// culatra inferior = 3
+// nucleo superior = 4
+// coil = 5
+// nucleo superior 2 = 6
+// nucleo superior 3 = 7
+// simetria = 101
+
+fespace ThP0(Th, P0);
+fespace ThP1(Th, P1);
+
+ThP0 Bx, By, normB;
+ThP0 mu, muinv;
+ThP0 reg = region;
+
+real mu0 = 4*pi*1e-7;
+
+// lei constitutiva não linear
+func real muNL(real B){
+    real a = 100;   // m/H
+    real b = 10;    // m/H
+    real c = 1.8;   // T^-2
+    return 1.0/(mu0*(a + pow(b, c*B*B))); // μ(B)
+}
+
+ThP0 regnonlin = (region==3) + (region==4) + (region==6) + (region==7);
+
+real area = int2d(Th, 5)(1);
+cout << "Area da bobina = " << area << endl;
+
+// Corrente
+real j = 3.2e6;    // A/m²  (N=1000, i=32A, S=0.01 m²)
+real iindividual = 32;
+real espiras = 1000;
+
+// Espaços de FE
+ThP1 a, w, da;
+
+// inicializa μ com valor linear
+mu = mu0*(reg==1)
+   + mu0*(reg==2)
+   + 1000*mu0*regnonlin
+   + mu0*(reg==5);
+
+// ---------------------------
+// Iteração não linear
+// ---------------------------
+int nmaxit = 20;
+for (int k=0; k<nmaxit; k++){
+
+    solve magstat(a,w) = int2d(Th)( (1.0/mu) * (dx(a)*dx(w) + dy(a)*dy(w)) )
+                       - int2d(Th,5)( j*w )
+                       + on(102, a=0)
+                       + on(101, a=0);
+
+    // calcula B
+    Bx = dy(a);
+    By = -dx(a);
+    normB = sqrt(Bx^2+By^2) + 1e-12; // evitar divisão por zero
+
+    // atualiza μ apenas nas regiões não lineares
+    for (int i=0; i<mu[].n; i++){
+        if(regnonlin[][i]==1){
+            mu[][i] = muNL(normB[][i]);
+        }
+    }
+
+    plot(normB, wait=1, fill=1, value=1, cmm="|B| iteracao "+k);
+    cout << "Iteracao " << k << " concluida" << endl;
+}
+
+// ---------------------------
+// Pós-processamento
+// ---------------------------
+real energiatotal = int2d(Th)((Bx^2 + By^2)/(2*mu));
+real indutanciaenergia = energiatotal*2/(iindividual*iindividual);
+real indutanciafluxo = (espiras * int1d(Th,400)(-By)) / iindividual;
+
+cout << "Valor de B no entreferro interno = " << normB(0.05,-0.01) << endl;
+cout << "Valor de B no entreferro externo = " << normB(0.25,-0.01) << endl;
+cout << "Energia total = " << energiatotal << endl;
+cout << "Indutancia por energia = " << indutanciaenergia << endl;
+cout << "Indutancia por fluxo no entreferro = " << indutanciafluxo << endl;
+
+plot([Bx,By], wait=1, value=1, cmm="Bx, By");
