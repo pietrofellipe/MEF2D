@@ -17,8 +17,8 @@ load "gmsh"
         fespace ThP0(Th, P0);
         fespace ThP1(Th, P1);
 
-        ThP0 Bx, By, normB; // variáveis Bx By e norma de B
-        ThP0 mu, muinv;
+        ThP0 Bx, By, normb; // variáveis Bx By e norma de B
+        ThP0 mu;
             
         ThP0 reg = region;
         plot (reg, wait = 1, fill = 1, cmm = "Espacos P0");
@@ -30,45 +30,48 @@ load "gmsh"
                 real a = 100;   // m/H
                 real b = 10;    // m/H
                 real c = 1.8;   // T^-2
-                return 1.0/(mu0*(a + pow(b, c*B*B))); // μ(B)
+                return 1.0/(a + b * exp(c*B*B)); // μ(B)
         }
      
-        ThP0 regnonlin = (region==3) + (region==4) + (region==6) + (region==7); 
+        ThP0 regnonlin = (reg==3) + (reg==4) + (reg==6) + (reg==7); 
         // inicializa mu com valor linear
-        ThP0 mu;
-        mu =mu0*(reg==1) + mu0*(reg==2) + 1000*mu0*regnonlin + mu0*(reg==5);
+        mu = mu0*(reg==1) + mu0*(reg==2) + 1000*mu0*regnonlin + mu0*(reg==5);
 
         
         real area = int2d(Th, 5)(1);
         //cout << "Area do coil = " << area << endl;
         plot (mu, wait = 1, fill = 1, cmm = "regioes mu de 1000*u0 e de u0");
 
-        real j=3200000.0; // (A/m^2) N=1000 e i=32A espira ampere-espira = 32 000 S = 0.01m^2
-        real iindividual = 32;
+       
+        real iindividual = 5;
         real espiras = 1000;
+        real j=(espiras * iindividual)/area; // (A/m^2) N=1000 e i=32A espira ampere-espira = 32 000 S = 0.01m^2
         ThP1 a, w, da;
 
-        int nmaxit = 20;
+        int nmaxit = 100;
         for (int k=0; k<nmaxit; k++){
 
+          solve magstat(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
+                          -   int2d(Th, 5)(j*w)  
+                          +   on (102, a = 0)
+                          +   on (101, a = 0);
 
-        solve magstat(a,w) = int2d(Th)((1./mu) * (dx(a)*dx(w) + dy(a)*dy(w)))   
-                        -   int2d(Th, 5)(j*w)  
-                        +   on (102, a = 0)
-                        +   on (101, a = 0);
+          //plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
+          // calcula B 
+          Bx=dy(a);
+          By=-dx(a);
+          normb = sqrt(Bx^2+By^2);
 
-        //plot (a, wait = 1, fill = true, value = 1, cmm = "rot a");
-        // calcula B 
-        Bx=dy(a), By=-dx(a);
-        normb = sqrt(Bx^2+By^2);
-
-        for (int i=0; i<mu[].n; i++){
-        if(regnonlin[][i]==1){
-            mu[][i] = muNL(normB[][i]);
-        }
-    }
-      plot(normB, wait=1, fill=1, value=1, cmm="|B| iteracao "+k);
-    cout << "Iteracao " << k << " concluída" << endl;
+          real alpha = 0.1; // fator de relaxação
+            for (int i=0; i<mu[].n; i++){
+                if(regnonlin[][i]==1){
+                    real munew = muNL(normb[][i]);
+                    mu[][i] = (1 - alpha)*mu[][i] + alpha*munew;
+                }
+            }
+        plot(normb, wait=1, fill=1, value=1, cmm="|B| iteracao "+k);
+        cout << "Iteracao " << k << " concluida" << endl;
+        cout << "Valor mu core" << mu(0.05, 0.05) << endl;
 }
 
                         
@@ -82,15 +85,15 @@ load "gmsh"
                 cout << "Valor de B no entreferro interno" << normb(0.05,-0.01) << endl;
                 cout << "Valor de B no entreferro externo" << normb(0.25,-0.01) << endl;
                 cout << "Valor da energia " << energiatotal << endl;
-                cout << "Valor da indutancia por energia " << indutanciaenergia << endl;
-                cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
+                //cout << "Valor da indutancia por energia " << indutanciaenergia << endl;
+                //cout << "Valor da indutancia por fluxo no entreferro " << indutanciafluxo << endl;
                 //cout << "Valor da indutancia por fluxo medio " << indutanciafluxomedio << endl;
 
 
                 plot ([Bx, By], wait = 1, value = 1, cmm = "Bx By");
 
 
-                real integralAJ = int2d(Th, 5)( a * j );   // ∫_coil A J dS
+                //real integralAJ = int2d(Th, 5)( a * j );   // ∫_coil A J dS
 
                 //cout << "integral AJ = " << integralAJ << endl;
 
