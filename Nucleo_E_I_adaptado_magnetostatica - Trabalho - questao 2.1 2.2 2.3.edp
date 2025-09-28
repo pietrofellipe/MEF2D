@@ -1,6 +1,6 @@
 load "gmsh"
         verbosity = 0;
-        mesh Th = gmshload("W:github/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
+        mesh Th = gmshload("W:/github/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
@@ -60,7 +60,7 @@ load "gmsh"
         ThP0 Bx=dy(a), By=-dx(a);
 
                 ThP0 normb = sqrt(Bx^2+By^2);
-                real energiatotal = int2d(Th)((Bx^2 + By^2)/(2*mu));
+                real energiatotal = int2d(Th, 2)((Bx^2 + By^2)/(2*mu));
                 //real energiasqrt = int2d(Th)(normb^2)/(2*mu0);
                 real indutanciaenergia = energiatotal*2/(iindividual)^2;
                 real indutanciafluxo = (espiras * int1d(Th, 400)(-By)) / iindividual;

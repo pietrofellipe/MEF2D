@@ -107,8 +107,8 @@ Curve Loop(6) = {1, 17, -11, -18};
 //+
 Plane Surface(6) = {-6};
 //+
-Point(36) = {0, 2.16, 0, lc};
-Point(37) = {0, -2.16, 0, lc};
+Point(36) = {0, 0.721, 0, lc};
+Point(37) = {0, -0.721, 0, lc};
 //+
 //+
 Circle(23) = {37, 3, 36};
@@ -158,3 +158,15 @@ Physical Curve("bordatensormaxwell", 600) = {17};
 Physical Curve("fmaxwellentreferrointerno", 601) = {14};
 //+
 Physical Curve("fmaxwellentreferroexterno", 602) = {16};
+//+
+Point(42) = {0.1, -0.02, 0, 1.0};
+//+
+Point(43) = {0.2, -0.02, 0, 1.0};
+//+
+Line(27) = {2, 42};
+//+
+Line(28) = {42, 2};
+//+
+Line(29) = {42, 13};
+//+
+Line(30) = {43, 23};
