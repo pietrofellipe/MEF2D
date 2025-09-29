@@ -1,6 +1,6 @@
 load "gmsh"
         verbosity = 0;
-        mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - integral.msh");
+        mesh Th = gmshload("C:/Users/Pietro/Documents/GitHub/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
         //plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo

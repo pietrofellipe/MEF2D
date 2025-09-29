@@ -1,6 +1,10 @@
 load "gmsh"
         verbosity = 0;
+<<<<<<< Updated upstream
         mesh Th = gmshload("W:/github/MEF2D/Mesh/Nucleo_E_I - Trabalho tensormaxwell.msh");
+=======
+        mesh Th = gmshload("C:/Users/Pietro/Documents/GitHub/MEF2D/Mesh/Nucleo_E_I - Trabalho tensormaxwell.msh");
+>>>>>>> Stashed changes
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
