@@ -1,7 +1,7 @@
         load "gmsh"
         verbosity = 0;
         //mesh Th = gmshload("C:/Users/Pietro/Documents/GitHub/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
-        mesh Th = gmshload("W:/github/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
+        mesh Th = gmshload("W:/github/MEF2D/Mesh/Nucleo_E_I - Trabalho tensormaxwell borda.msh");
         plot (Th, wait = 1, cmm = "Malha");
 
         // Definição das regions dentro do arquivo .geo
