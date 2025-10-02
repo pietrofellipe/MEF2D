@@ -1,0 +1,143 @@
+// Script FreeFEM: Newton com tensor diferencial K_{ij} = dH_i/dB_j (2D Az)
+load "gmsh"
+verbosity = 0;
+//mesh Th = gmshload("W:/TrabalhoMEF2D/MalhasGMSH/Malhasparaloop/Nucleo_E_I - integral.msh");
+mesh Th = gmshload("W:/github/MEF2D/Mesh/Malhasparaloop/Nucleo_E_I - integral.msh");
+plot (Th, wait = 1, cmm = "Malha");
+
+// Espaços finitos
+fespace P1(Th, P1);
+fespace P0(Th, P0);
+
+// Campos
+P1 a, an, w;
+a = 0;
+P0 Bx, By, Bnorma;
+P0 nu, dnudB;
+P0 Kxx, Kyy, Kxy;
+P0 mufield;
+P0 reg = region;
+P0 regnonlin = (reg==3) + (reg==4) + (reg==6) + (reg==7);
+
+// constantes físicas
+real mu0 = 4*pi*1e-7;
+
+// parâmetros da lei mu(B) = 1/(am + bm exp(cm B^2))
+real am = 100.0;
+real bm = 10.0;
+real cm = 1.8;
+
+func real muNL(real B){
+    return 1.0 / (am + bm * exp(cm * B * B));
+}
+
+// Corrente / coil
+real iindiv = 50;              // A por espira
+real Nespiras = 1000;         // N de espiras
+real area = int2d(Th, 5)(1);  // área do coil
+real j = (Nespiras * iindiv) / area;
+
+// Parâmetros do Newton
+int nmaxit = 150;
+real tol = 1e-6;
+real alpharelax = 0.1;
+real Btol = 1e-14;
+real dnudBmin = -1e12;
+real dnudBmax =  1e12;
+
+// Loop Newton
+for (int k = 0; k < nmaxit; k++) {
+    Bx = dy(a);
+    By = -dx(a);
+    Bnorma = sqrt(Bx^2 + By^2);
+
+    // calcula nu, dnudB, mufield
+    for (int i = 0; i < nu[].n; i++) {
+        if (regnonlin[][i] == 1) {
+            real Bval = Bnorma[][i];
+            if (Bval < Btol) {
+                nu[][i]    = am + bm;
+                dnudB[][i] = 0.0;
+            } else {
+                real expc = exp(cm * Bval * Bval);
+                nu[][i]    = am + bm * expc;
+                dnudB[][i] = 2.0 * cm * bm * Bval * expc;
+                if (dnudB[][i] < dnudBmin) dnudB[][i] = dnudBmin;
+                if (dnudB[][i] > dnudBmax) dnudB[][i] = dnudBmax;
+            }
+            mufield[][i] = 1.0 / nu[][i];
+        } else {
+            nu[][i] = 1.0 / mu0;
+            dnudB[][i] = 0.0;
+            mufield[][i] = mu0;
+        }
+    }
+
+    // tensor diferencial K
+    for (int i = 0; i < Kxx[].n; i++) {
+        real Bval = Bnorma[][i];
+        real Bxval = Bx[][i];
+        real Byval = By[][i];
+
+        if (Bval < Btol) {
+            Kxx[][i] = nu[][i];
+            Kyy[][i] = nu[][i];
+            Kxy[][i] = 0.0;
+        } else {
+            real coef = dnudB[][i] / Bval;
+            Kxx[][i] = coef * (Bxval * Bxval) + nu[][i];
+            Kyy[][i] = coef * (Byval * Byval) + nu[][i];
+            Kxy[][i] = coef * (Bxval * Byval);
+        }
+    }
+
+    // resolve sistema linearizado
+    problem magstatlin(an, w)
+        = int2d(Th)(
+              Kyy * dx(an) * dx(w)
+            + Kxx * dy(an) * dy(w)
+            - Kxy * ( dx(an) * dy(w) + dy(an) * dx(w) )
+          )
+          - int2d(Th, 5)( j * w )
+          + on(102, an = 0)
+          + on(101, an = 0);
+
+    magstatlin;
+
+    real corrl2 = sqrt(int2d(Th)((an - a)*(an - a)));
+    cout << "Iter " << k << "  corr L2 = " << corrl2 << endl;
+
+    a = a + alpharelax * (an - a);
+
+    if (corrl2 < tol) {
+        cout << "Convergiu em " << k << " iteracoes (corr L2 = " << corrl2 << ")." << endl;
+        break;
+    }
+
+    Bx = dy(a); By = -dx(a); Bnorma = sqrt(Bx^2 + By^2);
+    plot(Bnorma, wait = 0, fill = 1, value = 1, cmm = "|B| iter " + k);
+}
+
+// resultados finais
+Bx = dy(a);
+By = -dx(a);
+Bnorma = sqrt(Bx^2 + By^2);
+
+for (int i = 0; i < mufield[].n; i++){
+    if (regnonlin[][i] == 1) mufield[][i] = muNL(Bnorma[][i]);
+    else mufield[][i] = mu0;
+}
+
+real Etotal = int2d(Th)((Bx^2 + By^2) / (2.0 * mufield));
+real Lenergia = Etotal * 2.0 / (iindiv * iindiv);
+real Lfluxo = (Nespiras * int1d(Th, 400)( -By )) / iindiv;
+
+cout << "Valor de B no entreferro interno: " << Bnorma(0.05, -0.01) << endl;
+cout << "Valor de B no entreferro externo: " << Bnorma(0.25, -0.01) << endl;
+cout << "Energia total: " << Etotal << endl;
+cout << "Indutancia (energia): " << Lenergia << " H" << endl;
+cout << "Indutancia (fluxo): " << Lfluxo << " H" << endl;
+
+plot([Bx, By], wait = 1, value = 1, cmm = "Bx, By (final)");
+plot(Bnorma, wait = 1, fill = 1, value = 1, cmm = "|B| (final)");
+plot(mufield, wait = 1, fill = 1, value = 1, cmm = "mu (final)");
