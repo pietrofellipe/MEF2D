@@ -33,7 +33,7 @@ func real muNL(real B){
 }
 
 // Corrente / coil
-real iindiv = 80;              // A por espira
+real iindiv = 32;              // A por espira
 real Nespiras = 1000;         // N de espiras
 real area = int2d(Th, 5)(1);  // área do coil
 real j = (Nespiras * iindiv) / area;
