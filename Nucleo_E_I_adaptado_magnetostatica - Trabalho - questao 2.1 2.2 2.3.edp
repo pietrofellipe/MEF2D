@@ -13,6 +13,7 @@ load "gmsh"
         // nucleo superior 2 = 6
         // nucleo superior 3 = 7
         // simetria = 101
+        // contorno = 102
 
         fespace ThP0(Th, P0);
         fespace ThP1(Th, P1);
